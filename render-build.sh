@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 
-# Install dependencies
-npm install
+# Install packages (including Playwright)
+npm install playwright express
 
-# Install Playwright browsers (Chromium)
+# Install Chromium
 npx playwright install chromium
