@@ -1,9 +1,7 @@
 const express = require('express');
 const { chromium } = require('playwright');
-const dotenv = require('dotenv');
-dotenv.config();
-
 const app = express();
+
 app.use(express.json());
 
 app.get('/', (req, res) => {
@@ -11,12 +9,9 @@ app.get('/', (req, res) => {
 });
 
 app.post('/scrape-cvr', async (req, res) => {
-  const { company, username, password } = req.body;
+  const { username, password, company } = req.body;
 
-  const user = username || process.env.USERNAME;
-  const pass = password || process.env.PASSWORD;
-
-  if (!user || !pass || !company) {
+  if (!username || !password || !company) {
     return res.status(400).json({ error: 'Missing username, password, or company' });
   }
 
@@ -24,21 +19,26 @@ app.post('/scrape-cvr', async (req, res) => {
   const page = await browser.newPage();
 
   try {
-    // Replace the selectors below with the actual ones from TheRightPeople
-    await page.goto('https://therightpeople.com/login', { waitUntil: 'networkidle' });
+    console.log('Navigating to TRP login...');
+    await page.goto('https://therightpeople.com/login', { waitUntil: 'domcontentloaded' });
 
-    await page.fill('#username', user); // update selector
-    await page.fill('#password', pass); // update selector
+    // TODO: Replace these selectors if TRP uses different IDs or names
+    await page.fill('input[name="username"], input#username', username);
+    await page.fill('input[name="password"], input#password', password);
     await page.click('button[type="submit"]');
-    await page.waitForNavigation();
+    await page.waitForNavigation({ waitUntil: 'networkidle' });
 
-    await page.goto(`https://therightpeople.com/search?q=${encodeURIComponent(company)}`, { waitUntil: 'networkidle' });
+    console.log('Logged in. Searching for company...');
+    await page.goto(`https://therightpeople.com/search?q=${encodeURIComponent(company)}`);
+    await page.waitForSelector('.cvr-selector', { timeout: 10000 }); // Update selector as needed
 
-    await page.waitForSelector('.cvr-selector'); // update selector
-    const cvr = await page.textContent('.cvr-selector'); // update selector
+    const cvr = await page.textContent('.cvr-selector'); // Update selector as needed
+    console.log('Found CVR:', cvr);
 
     res.json({ cvr });
+
   } catch (err) {
+    console.error('Scraping failed:', err);
     res.status(500).json({ error: err.message });
   } finally {
     await browser.close();
@@ -47,5 +47,5 @@ app.post('/scrape-cvr', async (req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`TRP Scraper running on port ${PORT}`);
+  console.log(`Scraper running on port ${PORT}`);
 });
