@@ -15,10 +15,8 @@ app.post('/scrape-cvr', async (req, res) => {
     return res.status(400).json({ error: 'Missing username, password, or company in request body' });
   }
 
-  const browser = await chromium.launch({
-    headless: true,
-    executablePath: '/usr/bin/chromium-browser' // <- THIS is the key fix
-  });
+const browser = await chromium.launch({ headless: true });
+
 
   const page = await browser.newPage();
 

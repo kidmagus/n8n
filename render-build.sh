@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 
-# Update packages
-apt-get update
-
-# Install Chromium manually
-apt-get install -y chromium-browser
-
-# Install Node dependencies
+# Install dependencies
 npm install
+
+# Download Chromium
+npx playwright install chromium
