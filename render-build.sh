@@ -1,7 +1,10 @@
 #!/usr/bin/env bash
 
-# Install packages (including Playwright)
-npm install playwright express
+# Update packages
+apt-get update
 
-# Install Chromium
-npx playwright install chromium
+# Install Chromium manually
+apt-get install -y chromium-browser
+
+# Install Node dependencies
+npm install

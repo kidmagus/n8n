@@ -1,5 +1,5 @@
 const express = require('express');
-const { chromium } = require('playwright');
+const { chromium } = require('playwright-core'); // use playwright-core
 const app = express();
 
 app.use(express.json());
@@ -12,49 +12,35 @@ app.post('/scrape-cvr', async (req, res) => {
   const { username, password, company } = req.body;
 
   if (!username || !password || !company) {
-    return res.status(400).json({
-      error: 'Missing username, password, or company in request body',
-    });
+    return res.status(400).json({ error: 'Missing username, password, or company in request body' });
   }
 
-  let browser;
+  const browser = await chromium.launch({
+    headless: true,
+    executablePath: '/usr/bin/chromium-browser' // <- THIS is the key fix
+  });
+
+  const page = await browser.newPage();
 
   try {
-    browser = await chromium.launch({ headless: true });
-    const page = await browser.newPage();
-
-    console.log('Navigating to TRP login...');
-    await page.goto('https://therightpeople.com/login', { waitUntil: 'domcontentloaded' });
-
-    // Replace with correct selectors if needed
-    await page.fill('input[name="username"], input#username', username);
-    await page.fill('input[name="password"], input#password', password);
+    await page.goto('https://therightpeople.com/login');
+    await page.fill('#username', username); // update selector if needed
+    await page.fill('#password', password); // update selector if needed
     await page.click('button[type="submit"]');
+    await page.waitForNavigation();
 
-    // Wait for login to complete
-    await page.waitForNavigation({ waitUntil: 'networkidle' });
-    console.log('Logged in.');
-
-    // Go to company search
-    const searchUrl = `https://therightpeople.com/search?q=${encodeURIComponent(company)}`;
-    console.log('Navigating to:', searchUrl);
-    await page.goto(searchUrl);
-    await page.waitForSelector('.cvr-selector', { timeout: 10000 });
-
-    const cvr = await page.textContent('.cvr-selector');
-    console.log('CVR found:', cvr);
+    await page.goto(`https://therightpeople.com/search?q=${encodeURIComponent(company)}`);
+    await page.waitForSelector('.cvr-selector'); // update selector to actual
+    const cvr = await page.textContent('.cvr-selector'); // update selector to actual
 
     res.json({ cvr });
-
   } catch (err) {
-    console.error('Error during scrape:', err.message);
     res.status(500).json({ error: err.message });
   } finally {
-    if (browser) await browser.close();
+    await browser.close();
   }
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`✅ TRP Scraper running on port ${PORT}`);
+app.listen(3000, () => {
+  console.log('Scraper running on port 3000');
 });
