@@ -69,7 +69,7 @@ app.post('/scrape-cvr', async (req, res) => {
         const firstName = await cols.nth(3).innerText();
         const lastName = await cols.nth(4).innerText();
         const phone = await cols.nth(5).innerText();
-        const email = await cols.nth(7).innerText(); // email in column 8
+        const email = await cols.nth(7).innerText();
 
         const linkRow = personRows.nth(i + 1);
         const linkCols = linkRow.locator('td a');
