@@ -7,7 +7,7 @@ app.get('/', (req, res) => {
   res.send('TRP Scraper is running!');
 });
 
-app.post('/scrape-cvr', async (req, res) => {
+app.post('/scrape-employee', async (req, res) => {
   const { username, password, cvr } = req.body;
   if (!username || !password || !cvr) {
     return res.status(400).json({ error: 'Missing username, password, or cvr' });
