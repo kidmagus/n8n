@@ -2,6 +2,9 @@
 <p>$ nvm install 20.18.1</p>
 <p> nvm use 20.18.1</p>
 
+<p>To start the scraper type in terminal : pm2 start server.js</p>
+<p>https://pm2.keymetrics.io/docs/usage/quick-start/</p>
+
 <h3>POST Request and Body Parameter<h3>
 https://domain.com/scrape-employee
 {
