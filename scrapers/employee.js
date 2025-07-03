@@ -1,5 +1,19 @@
 const { chromium } = require('playwright');
 
+/**
+ * Scrapes employee information (CXO, Board, Director) from TheRightPeople for a given company CVR.
+ * @param {string} username - Login username for TheRightPeople
+ * @param {string} password - Login password for TheRightPeople
+ * @param {string} cvr - The company's CVR number to search for
+ * @returns {Promise<{
+ *   CompanyName: string,
+ *   'Company CVR': string,
+ *   CXO: Array<Object>,
+ *   Bestyrelse: Array<Object>,
+ *   Director: Array<Object>
+ * }>}
+ */
+
 module.exports = async function scrapeEmployee(username, password, cvr) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();

@@ -10,6 +10,14 @@ app.get('/', (req, res) => {
   res.send('Unified TRP Scraper is running!');
 });
 
+/**
+ * POST /scrape-cvr
+ * Logs in to TheRightPeople and extracts the CVR number of a company by name.
+ * @body {string} username - TheRightPeople login username
+ * @body {string} password - TheRightPeople login password
+ * @body {string} company - Company name to search for
+ */
+
 app.post('/scrape-cvr', async (req, res) => {
   const { username, password, company } = req.body;
   if (!username || !password || !company) {
@@ -24,6 +32,14 @@ app.post('/scrape-cvr', async (req, res) => {
   }
 });
 
+/**
+ * POST /scrape-employee
+ * Logs in to TheRightPeople and scrapes employee data (CXO, Board, Directors) by CVR.
+ * @body {string} username - TheRightPeople login username
+ * @body {string} password - TheRightPeople login password
+ * @body {string} cvr - Company CVR number
+ */
+
 app.post('/scrape-employee', async (req, res) => {
   const { username, password, cvr } = req.body;
   if (!username || !password || !cvr) {
@@ -37,6 +53,12 @@ app.post('/scrape-employee', async (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+/**
+ * POST /scrape-company
+ * Scrapes company data from a public or third-party source using company name.
+ * @body {string} company - Company name
+ */
 
 app.post('/scrape-company', async (req, res) => {
   const { company } = req.body;

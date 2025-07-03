@@ -1,5 +1,15 @@
 const { chromium } = require('playwright');
 
+/**
+ * Scrapes the CVR number of a company from TheRightPeople.
+ * Logs into the site using provided credentials, searches for the company by name, and extracts the CVR number.
+ *
+ * @param {string} username - Login username for TheRightPeople
+ * @param {string} password - Login password for TheRightPeople
+ * @param {string} company - The name of the company to search for
+ * @returns {Promise<{ CompanyName: string, 'Company CVR': string }>} - The company name and its CVR number
+ */
+
 module.exports = async function scrapeCVR(username, password, company) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();

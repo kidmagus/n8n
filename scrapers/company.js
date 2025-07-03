@@ -17,13 +17,13 @@ async function scrapeCompany(companyName) {
   const page = await context.newPage();
 
   try {
-    const query = `${companyName} LinkedIn`;
+    const query = `${companyName} LinkedIn Profile`;
     await page.goto('https://www.bing.com');
     await page.waitForSelector('#sb_form_q', { timeout: 10000 });
     await page.fill('#sb_form_q', '');
     await page.type('#sb_form_q', query, { delay: 100 });
     await page.keyboard.press('Enter');
-    await page.waitForTimeout(5000);
+    await page.waitForTimeout(15000);
 
     const links = await page.$$eval('li.b_algo a', anchors =>
       anchors
@@ -32,10 +32,6 @@ async function scrapeCompany(companyName) {
           const lower = href.toLowerCase();
           return (
             lower.includes('linkedin.com/company') ||
-            lower.includes('linkedin.com/in') ||
-            lower.includes('linkedin.com/public-profile') ||
-            lower.includes('linkedin.com/profile') ||
-            lower.includes('linkedin.com/') ||
             lower.includes('dk.linkedin.com/company')
           );
         })
