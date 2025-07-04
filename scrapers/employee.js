@@ -13,52 +13,58 @@ const { chromium } = require('playwright');
  *   Director: Array<Object>
  * }>}
  */
-
 module.exports = async function scrapeEmployee(username, password, cvr) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
   try {
+    // Login
     await page.goto('https://therightpeople.dk/login.aspx', { waitUntil: 'load' });
     await page.fill('#Username', username);
     await page.fill('#Password', password);
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle' });
 
+    // Navigate to company info section
     await page.goto('https://therightpeople.dk/datamanager.aspx#/companyinfo', { waitUntil: 'networkidle' });
-
     await page.waitForTimeout(5000);
-    const cvrInputs = page.locator('#txtCVR');
-    const inputCount = await cvrInputs.count();
-    let visibleCVRInput = null;
 
+    // Find visible CVR input
+    const cvrInputs = await page.locator('#txtCVR');
+    const inputCount = await cvrInputs.count();
+
+    let visibleInput = null;
     for (let i = 0; i < inputCount; i++) {
-      const el = cvrInputs.nth(i);
-      if (await el.isVisible()) {
-        visibleCVRInput = el;
+      const input = cvrInputs.nth(i);
+      if (await input.isVisible()) {
+        visibleInput = input;
         break;
       }
     }
 
-    if (!visibleCVRInput) throw new Error('#txtCVR input is not visible after waiting.');
-    await visibleCVRInput.fill(cvr);
+    if (!visibleInput) throw new Error('#txtCVR input is not visible after timeout.');
+
+    await visibleInput.fill(cvr);
     await page.keyboard.press('Enter');
     await page.waitForTimeout(5000);
 
-    const companyName = await page.locator('h2.ng-binding').first().textContent();
+    // Extract company name and CVR
+    const companyName = (await page.locator('h2.ng-binding').first().textContent())?.trim() || 'N/A';
     const allTexts = await page.locator('.ng-binding').allTextContents();
-    const companyCVR = allTexts.map(t => t.match(/\b\d{8}\b/)?.[0]).find(Boolean) || 'CVR not found';
+    const companyCVR = allTexts.map(text => text.match(/\b\d{8}\b/)?.[0]).find(Boolean) || 'CVR not found';
 
+    // Extract person data from sections
     const extractPeopleFromSection = async (sectionName) => {
       const people = [];
-      const sectionTbody = page.locator(`tbody:has-text("${sectionName}")`);
-      const personRows = sectionTbody.locator('tr.ng-scope');
-      const rowCount = await personRows.count();
+      const section = page.locator(`tbody:has-text("${sectionName}")`);
+      const rows = section.locator('tr.ng-scope');
+      const count = await rows.count();
 
-      for (let i = 0; i < rowCount; i += 2) {
-        const row = personRows.nth(i);
-        const cols = row.locator('td');
+      for (let i = 0; i < count; i += 2) {
+        const dataRow = rows.nth(i);
+        const cols = dataRow.locator('td');
+
         const position = await cols.nth(0).innerText();
         const firstName = await cols.nth(3).innerText();
         const lastName = await cols.nth(4).innerText();
@@ -66,13 +72,13 @@ module.exports = async function scrapeEmployee(username, password, cvr) {
         const mobile = await cols.nth(6).innerText();
         const email = await cols.nth(7).innerText();
 
-        const linkRow = personRows.nth(i + 1);
-        const linkCols = linkRow.locator('td a');
+        const linkRow = rows.nth(i + 1);
+        const links = linkRow.locator('td a');
+        const linkCount = await links.count();
+
         let linkedin = '';
-        const linkCount = await linkCols.count();
         for (let j = 0; j < linkCount; j++) {
-          const link = linkCols.nth(j);
-          const href = await link.getAttribute('href');
+          const href = await links.nth(j).getAttribute('href');
           if (href?.includes('linkedin.com')) {
             linkedin = href;
             break;
@@ -80,7 +86,7 @@ module.exports = async function scrapeEmployee(username, password, cvr) {
         }
 
         people.push({
-          name: `${firstName} ${lastName}`,
+          name: `${firstName.trim()} ${lastName.trim()}`,
           position: position.trim(),
           telephone: telephone.trim(),
           mobile: mobile.trim(),
@@ -92,20 +98,20 @@ module.exports = async function scrapeEmployee(username, password, cvr) {
       return people;
     };
 
-    const cxoPeople = await extractPeopleFromSection('CXO');
-    const boardPeople = await extractPeopleFromSection('Bestyrelse');
-    const directorPeople = await extractPeopleFromSection('Director');
+    const CXO = await extractPeopleFromSection('CXO');
+    const Bestyrelse = await extractPeopleFromSection('Bestyrelse');
+    const Director = await extractPeopleFromSection('Director');
 
     return {
-      CompanyName: companyName?.trim(),
+      CompanyName: companyName,
       'Company CVR': companyCVR,
-      CXO: cxoPeople,
-      Bestyrelse: boardPeople,
-      Director: directorPeople
+      CXO,
+      Bestyrelse,
+      Director
     };
-  } catch (err) {
+  } catch (error) {
     await page.screenshot({ path: 'employee-error.png', fullPage: true });
-    throw err;
+    throw new Error(`Scraping failed: ${error.message}`);
   } finally {
     await browser.close();
   }

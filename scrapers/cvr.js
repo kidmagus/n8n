@@ -1,3 +1,4 @@
+
 const { chromium } = require('playwright');
 
 /**
@@ -7,61 +8,67 @@ const { chromium } = require('playwright');
  * @param {string} username - Login username for TheRightPeople
  * @param {string} password - Login password for TheRightPeople
  * @param {string} company - The name of the company to search for
- * @returns {Promise<{ CompanyName: string, 'Company CVR': string }>} - The company name and its CVR number
+ * @returns {Promise<{ CompanyName: string, 'Company CVR': string }>}
  */
-
 module.exports = async function scrapeCVR(username, password, company) {
   const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext();
   const page = await context.newPage();
 
   try {
+    // Login
     await page.goto('https://therightpeople.dk/login.aspx', { waitUntil: 'load' });
     await page.fill('#Username', username);
     await page.fill('#Password', password);
     await page.click('button[type="submit"]');
     await page.waitForNavigation({ waitUntil: 'networkidle' });
 
+    // Navigate to company info
     await page.goto('https://therightpeople.dk/datamanager.aspx#/companyinfo', { waitUntil: 'networkidle' });
 
-    const inputs = page.locator('input[placeholder="Eks. Danfoss A/S"]');
-    const count = await inputs.count();
-    let targetInput = null;
-    for (let i = 0; i < count; i++) {
-      const el = inputs.nth(i);
-      if (await el.isVisible()) {
-        targetInput = el;
-        break;
-      }
-    }
+    // Find visible company input
+    const inputBox = await findVisibleLocator(page, 'input[placeholder="Eks. Danfoss A/S"]');
+    if (!inputBox) throw new Error('No visible input field found for company search.');
 
-    if (!targetInput) throw new Error('Visible input for company not found.');
-    await targetInput.fill(company);
+    await inputBox.fill(company);
 
-    const searchButtons = page.locator('#search');
-    const btnCount = await searchButtons.count();
-    let visibleBtn = null;
-    for (let i = 0; i < btnCount; i++) {
-      const btn = searchButtons.nth(i);
-      if (await btn.isVisible()) {
-        visibleBtn = btn;
-        break;
-      }
-    }
+    // Find and click visible search button
+    const searchButton = await findVisibleLocator(page, '#search');
+    if (!searchButton) throw new Error('No visible search button found.');
 
-    if (!visibleBtn) throw new Error('Visible search button not found.');
-    await visibleBtn.click();
-
+    await searchButton.click();
     await page.waitForTimeout(4000);
 
-    const allTexts = await page.locator('.ng-binding').allTextContents();
-    const cvr = allTexts.map(t => t.match(/\b\d{8}\b/)?.[0]).find(Boolean) || 'CVR not found';
+    // Extract CVR number from text content
+    const textContent = await page.locator('.ng-binding').allTextContents();
+    const cvr = textContent.map(t => t.match(/\b\d{8}\b/)?.[0]).find(Boolean) || 'CVR not found';
 
-    return { CompanyName: company, 'Company CVR': cvr };
+    return {
+      CompanyName: company,
+      'Company CVR': cvr
+    };
   } catch (err) {
     await page.screenshot({ path: 'cvr-error.png', fullPage: true });
-    throw err;
+    throw new Error(`CVR scraping failed: ${err.message}`);
   } finally {
     await browser.close();
   }
 };
+
+/**
+ * Utility: Finds the first visible element matching the selector
+ * @param {import('playwright').Page} page
+ * @param {string} selector
+ * @returns {Promise<import('playwright').Locator | null>}
+ */
+async function findVisibleLocator(page, selector) {
+  const elements = page.locator(selector);
+  const count = await elements.count();
+  for (let i = 0; i < count; i++) {
+    const el = elements.nth(i);
+    if (await el.isVisible()) {
+      return el;
+    }
+  }
+  return null;
+}

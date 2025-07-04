@@ -1,28 +1,35 @@
 const express = require('express');
 const scrapeCVR = require('./scrapers/cvr');
 const scrapeEmployee = require('./scrapers/employee');
-const scrapeCompany = require('./scrapers/company'); 
+const scrapeCompany = require('./scrapers/company');
 
 const app = express();
 app.use(express.json());
 
-app.get('/', (req, res) => {
+const PORT = process.env.PORT || 3000;
+
+// Root endpoint
+app.get('/', (_req, res) => {
   res.send('Unified TRP Scraper is running!');
 });
 
+// Utility function to handle missing fields
+const validateFields = (fields, body, res) => {
+  const missing = fields.filter((field) => !body[field]);
+  if (missing.length > 0) {
+    return res.status(400).json({ error: `Missing: ${missing.join(', ')}` });
+  }
+  return null;
+};
+
 /**
  * POST /scrape-cvr
- * Logs in to TheRightPeople and extracts the CVR number of a company by name.
- * @body {string} username - TheRightPeople login username
- * @body {string} password - TheRightPeople login password
- * @body {string} company - Company name to search for
+ * Logs into TheRightPeople and extracts the CVR number using company name.
+ * Expects: { username, password, company }
  */
-
 app.post('/scrape-cvr', async (req, res) => {
+  if (validateFields(['username', 'password', 'company'], req.body, res)) return;
   const { username, password, company } = req.body;
-  if (!username || !password || !company) {
-    return res.status(400).json({ error: 'Missing username, password, or company' });
-  }
 
   try {
     const result = await scrapeCVR(username, password, company);
@@ -34,17 +41,12 @@ app.post('/scrape-cvr', async (req, res) => {
 
 /**
  * POST /scrape-employee
- * Logs in to TheRightPeople and scrapes employee data (CXO, Board, Directors) by CVR.
- * @body {string} username - TheRightPeople login username
- * @body {string} password - TheRightPeople login password
- * @body {string} cvr - Company CVR number
+ * Scrapes employee data (CXO, Board, etc.) using CVR.
+ * Expects: { username, password, cvr }
  */
-
 app.post('/scrape-employee', async (req, res) => {
+  if (validateFields(['username', 'password', 'cvr'], req.body, res)) return;
   const { username, password, cvr } = req.body;
-  if (!username || !password || !cvr) {
-    return res.status(400).json({ error: 'Missing username, password, or cvr' });
-  }
 
   try {
     const result = await scrapeEmployee(username, password, cvr);
@@ -56,15 +58,12 @@ app.post('/scrape-employee', async (req, res) => {
 
 /**
  * POST /scrape-company
- * Scrapes company data from a public or third-party source using company name.
- * @body {string} company - Company name
+ * Scrapes public company data using company name.
+ * Expects: { company }
  */
-
 app.post('/scrape-company', async (req, res) => {
+  if (validateFields(['company'], req.body, res)) return;
   const { company } = req.body;
-  if (!company) {
-    return res.status(400).json({ error: 'Missing company' });
-  }
 
   try {
     const result = await scrapeCompany(company);
@@ -74,6 +73,7 @@ app.post('/scrape-company', async (req, res) => {
   }
 });
 
-app.listen(3000, () => {
-  console.log('Unified server running on http://localhost:3000');
+// Start server
+app.listen(PORT, () => {
+  console.log(`Unified TRP Scraper running at http://localhost:${PORT}`);
 });
