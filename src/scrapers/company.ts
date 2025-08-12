@@ -9,7 +9,7 @@ export interface ScrapeCompanyResult {
 export async function scrapeCompany(companyName: string): Promise<ScrapeCompanyResult> {
   if (!companyName) throw new Error("Missing company name");
 
-  const browser = await chromium.launch({ headless: false });
+  const browser = await chromium.launch({ headless: true });
   const context = await browser.newContext({
     userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
   });
