@@ -97,3 +97,7 @@ app.post("/scrape-company", async (req: express.Request, res: express.Response) 
 app.listen(PORT, () => {
   console.log(`Unified TRP Scraper running at http://localhost:${PORT}`);
 });
+
+
+//** For it to run it's pm2  */ 
+//**  ts-node src/server.ts */ 
